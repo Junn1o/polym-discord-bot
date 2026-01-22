@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  bot:
+    build: .
+    container_name: utility-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    working_dir: /app
+    command: ["bun", "index.js"]
+    # nếu API chạy cùng host (192.168.1.52), không cần ports
+
+  # nếu API của bạn cũng là Node app và muốn cho vào compose
+  # api:
+  #   build: ./api
+  #   container_name: my-api
+  #   restart: unless-stopped
+  #   env_file:
+  #     - ./api/.env
+  #   ports:
+  #     - "23333:23333"
