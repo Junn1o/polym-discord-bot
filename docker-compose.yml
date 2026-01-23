@@ -9,6 +9,8 @@ services:
       - .env
     working_dir: /app
     command: ["bun", "index.js"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     # nếu API chạy cùng host (192.168.1.52), không cần ports
 
   # nếu API của bạn cũng là Node app và muốn cho vào compose
