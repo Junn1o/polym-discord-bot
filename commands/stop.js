@@ -47,27 +47,27 @@ module.exports = {
 
         const qs = new URLSearchParams({ apikey: apiKey, uuid, daemonId });
         const url = `${apiBase}/api/protected_instance/stop?${qs.toString()}`;
-
+        const killUrl = `${apiBase}/api/protected_instance/kill?${qs.toString()}`;
         try {
             const res = await fetch(url, { method: 'GET' });
-
             if (res.status == 500) {
                 return interaction.editReply(
                     `Server "${alias}" có mở đâu mà stop? hoặc lỗi thử /forcestop ${alias} đi`
                 );
             }
-            if (!res.ok) {
+            else if (!res.ok) {
                 return interaction.editReply(
                     `Có lỗi khi dừng server"${alias}"`
                 );
             }
-            await sleep(20_000);
-            const killUrl = `${apiBase}/api/protected_instance/kill?${qs.toString()}`;
-            await fetch(killUrl, { method: 'GET' });
-            
-            return interaction.editReply(
-                `Đã dừng server "${alias}"`
-            );
+            else{
+                const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+                await sleep(20_000);
+                await fetch(killUrl, { method: 'GET' });
+                return interaction.editReply(
+                    `Đã dừng server "${alias}"`
+                );
+            }
         } catch (e) {
             return interaction.editReply(`Request failed`);
         }
