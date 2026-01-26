@@ -61,7 +61,10 @@ module.exports = {
                     `Có lỗi khi dừng server"${alias}"`
                 );
             }
-
+            await sleep(20_000);
+            const killUrl = `${apiBase}/api/protected_instance/kill?${qs.toString()}`;
+            await fetch(killUrl, { method: 'GET' });
+            
             return interaction.editReply(
                 `Đã dừng server "${alias}"`
             );
