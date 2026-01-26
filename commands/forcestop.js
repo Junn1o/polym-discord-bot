@@ -46,7 +46,7 @@ module.exports = {
         }
 
         const qs = new URLSearchParams({ apikey: apiKey, uuid, daemonId});
-        const url = `${apiBase}/api/protected_instance/stop?${qs.toString()}`;
+        const url = `${apiBase}/api/protected_instance/kill?${qs.toString()}`;
 
         try {
             const res = await fetch(url, { method: 'GET' });
