@@ -12,7 +12,6 @@ concurrency:
 jobs:
   deploy:
     runs-on: self-hosted
-    # Secrets/variables nằm trong environment này
     environment: for-polym-utility
     env:
       for-polym-utility: for-polym-utility

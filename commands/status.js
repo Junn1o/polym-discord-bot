@@ -1,20 +1,15 @@
 // commands/start.js
 const { SlashCommandBuilder } = require('discord.js');
-const fs = require('node:fs');
-const path = require('node:path');
 const { MessageFlags } = require('discord.js');
-function loadAliases() {
-    const p = path.join(__dirname, '..', 'aliases.json');
-    if (!fs.existsSync(p)) return {};
-    return JSON.parse(fs.readFileSync(p, 'utf8'));
-}
+const { loadAliases, autocompleteAliases } = require('../utils/aliases');
 const { isAllowed } = require('../utils/auth');
 module.exports = {
+    autocomplete: autocompleteAliases,
     data: new SlashCommandBuilder()
         .setName('log')
         .setDescription('Trạng thái server')
         .addStringOption(opt =>
-            opt.setName('name').setDescription('server name').setRequired(true)
+            opt.setName('name').setDescription('server name').setRequired(true).setAutocomplete(true)
         ),
 
     async execute(interaction) {
