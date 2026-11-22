@@ -1,6 +1,6 @@
 # utility-bot
 Description:
-This mod is usage for mcsmanager with start, stop, forcestop and log function. Please refer to: https://docs.mcsmanager.com/apis/get_apikey.html for more details!
+This mod is usage for mcsmanager with start, stop, restart, forcestop and log function. Please refer to: https://docs.mcsmanager.com/apis/get_apikey.html for more details!
 
 To install dependencies:
 

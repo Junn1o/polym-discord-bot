@@ -8,7 +8,7 @@ function loadAliases() {
     if (!fs.existsSync(p)) return {};
     return JSON.parse(fs.readFileSync(p, 'utf8'));
 }
-const allowed = new Set(JSON.parse(process.env.ALLOWED_USER_IDS ?? '[]'));
+const { isAllowed } = require('../utils/auth');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('log')
@@ -18,7 +18,7 @@ module.exports = {
         ),
 
     async execute(interaction) {
-        if (!allowed.has(interaction.user.id)) {
+        if (!isAllowed(interaction)) {
             return interaction.reply({
                 content: 'Bạn không có quyền dùng lệnh này.',
                 flags: MessageFlags.Ephemeral,

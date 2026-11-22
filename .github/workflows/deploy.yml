@@ -1,0 +1,65 @@
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    env:
+      COMPOSE_PROJECT_NAME: utility-bot
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write .env
+        env:
+          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN || vars.DISCORD_TOKEN }}
+          API_KEY: ${{ secrets.API_KEY || vars.API_KEY }}
+          API_BASE: ${{ secrets.API_BASE || vars.API_BASE }}
+          DAEMON_ID: ${{ secrets.DAEMON_ID || vars.DAEMON_ID }}
+          ALLOWED_USER_IDS: ${{ secrets.ALLOWED_USER_IDS || vars.ALLOWED_USER_IDS }}
+          ALLOWED_ROLE_IDS: ${{ secrets.ALLOWED_ROLE_IDS || vars.ALLOWED_ROLE_IDS }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID || vars.CLIENT_ID }}
+          GUILD_IDS: ${{ secrets.GUILD_IDS || vars.GUILD_IDS }}
+        run: |
+          umask 077
+          cat > .env <<ENVEOF
+          DISCORD_TOKEN=${DISCORD_TOKEN}
+          API_KEY=${API_KEY}
+          API_BASE=${API_BASE}
+          DAEMON_ID=${DAEMON_ID}
+          ALLOWED_USER_IDS=${ALLOWED_USER_IDS}
+          ALLOWED_ROLE_IDS=${ALLOWED_ROLE_IDS}
+          CLIENT_ID=${CLIENT_ID}
+          GUILD_IDS=${GUILD_IDS}
+          ENVEOF
+          for k in DISCORD_TOKEN API_KEY DAEMON_ID CLIENT_ID GUILD_IDS; do
+            [ -n "${!k}" ] || { echo "::error::Missing $k"; exit 1; }
+          done
+
+      - name: Write aliases.json
+        env:
+          ALIASES_JSON: ${{ secrets.ALIASES_JSON || vars.ALIASES_JSON }}
+        run: |
+          if [ -z "$ALIASES_JSON" ]; then
+            echo "::error::Missing ALIASES_JSON"; exit 1
+          fi
+          printf '%s' "$ALIASES_JSON" > aliases.json
+
+      - name: Build and start bot
+        run: docker compose up -d --build --remove-orphans
+
+      - name: Register slash commands
+        run: docker compose run --rm bot bun deploy-commands.js
+
+      - name: Clean up
+        if: always()
+        run: |
+          rm -f .env aliases.json
+          docker image prune -f
