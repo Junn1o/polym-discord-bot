@@ -13,7 +13,7 @@ jobs:
   deploy:
     runs-on: self-hosted
     env:
-      COMPOSE_PROJECT_NAME: utility-bot
+      for-polym-utility: utility-bot
     steps:
       - uses: actions/checkout@v4
 
