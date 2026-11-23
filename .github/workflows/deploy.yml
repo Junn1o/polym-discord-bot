@@ -28,6 +28,8 @@ jobs:
           ALLOWED_ROLE_IDS: ${{ secrets.ALLOWED_ROLE_IDS || vars.ALLOWED_ROLE_IDS }}
           CLIENT_ID: ${{ secrets.CLIENT_ID || vars.CLIENT_ID }}
           GUILD_IDS: ${{ secrets.GUILD_IDS || vars.GUILD_IDS }}
+          DASHBOARD_CHANNEL_IDS: ${{ secrets.DASHBOARD_CHANNEL_IDS || vars.DASHBOARD_CHANNEL_IDS }}
+          DASHBOARD_INTERVAL_MS: ${{ secrets.DASHBOARD_INTERVAL_MS || vars.DASHBOARD_INTERVAL_MS }}
         run: |
           umask 077
           cat > .env <<ENVEOF
@@ -39,6 +41,8 @@ jobs:
           ALLOWED_ROLE_IDS=${ALLOWED_ROLE_IDS}
           CLIENT_ID=${CLIENT_ID}
           GUILD_IDS=${GUILD_IDS}
+          DASHBOARD_CHANNEL_IDS=${DASHBOARD_CHANNEL_IDS}
+          DASHBOARD_INTERVAL_MS=${DASHBOARD_INTERVAL_MS}
           ENVEOF
           for k in DISCORD_TOKEN API_KEY DAEMON_ID CLIENT_ID GUILD_IDS; do
             [ -n "${!k}" ] || { echo "::error::Missing $k"; exit 1; }
