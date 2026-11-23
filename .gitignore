@@ -38,5 +38,5 @@ aliases.json
 #claude and skills
 .claude/*
 #outside docs
-mcsmanager-api-docs/*
-discord-api-docs/*
+mcsmanager-api-docs/
+discord-api-docs/
