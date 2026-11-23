@@ -9,6 +9,7 @@ const {
 } = require('discord.js');
 const { loadAliases } = require('./aliases');
 const { isAllowed } = require('./auth');
+const { buildNetbirdButtons } = require('./netbirdDashboard');
 
 const PREFIX = 'dashboard';
 const ACTIONS = [
@@ -76,7 +77,8 @@ function buildComponents() {
 
     rows.push(
         new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId(`${PREFIX}:refresh`).setLabel('Refresh').setStyle(ButtonStyle.Secondary)
+            new ButtonBuilder().setCustomId(`${PREFIX}:refresh`).setLabel('Refresh').setStyle(ButtonStyle.Secondary),
+            ...buildNetbirdButtons()
         )
     );
     return rows;

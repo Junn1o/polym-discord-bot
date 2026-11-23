@@ -12,6 +12,12 @@ RUN bun install --frozen-lockfile --production
 # Copy source (.env, node_modules, .git bị loại bởi .dockerignore)
 COPY . .
 
+# Docker CLI để reset mật khẩu NetBird qua `docker exec` (cần mount docker.sock)
+COPY --from=docker:27-cli /usr/local/bin/docker /usr/local/bin/docker
+
+# Thư mục dữ liệu (lưu chủ sở hữu tài khoản NetBird)
+RUN mkdir -p /app/data && chown bun:bun /app/data
+
 # Biến môi trường (có thể override bằng .env / compose)
 ENV NODE_ENV=production
 

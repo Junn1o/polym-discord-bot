@@ -11,3 +11,11 @@ services:
     command: ["bun", "index.js"]
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    group_add:
+      - "${DOCKER_GID:-999}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - bot-data:/app/data
+
+volumes:
+  bot-data:

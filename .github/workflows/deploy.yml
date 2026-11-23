@@ -30,6 +30,11 @@ jobs:
           GUILD_IDS: ${{ secrets.GUILD_IDS || vars.GUILD_IDS }}
           DASHBOARD_CHANNEL_IDS: ${{ secrets.DASHBOARD_CHANNEL_IDS || vars.DASHBOARD_CHANNEL_IDS }}
           DASHBOARD_INTERVAL_MS: ${{ secrets.DASHBOARD_INTERVAL_MS || vars.DASHBOARD_INTERVAL_MS }}
+          NETBIRD_API_URL: ${{ secrets.NETBIRD_API_URL || vars.NETBIRD_API_URL }}
+          NETBIRD_TOKEN: ${{ secrets.NETBIRD_TOKEN }}
+          NETBIRD_AUTO_GROUPS: ${{ secrets.NETBIRD_AUTO_GROUPS || vars.NETBIRD_AUTO_GROUPS }}
+          NETBIRD_CONTAINER: ${{ vars.NETBIRD_CONTAINER }}
+          NETBIRD_CONFIG: ${{ vars.NETBIRD_CONFIG }}
         run: |
           umask 077
           cat > .env <<ENVEOF
@@ -43,6 +48,12 @@ jobs:
           GUILD_IDS=${GUILD_IDS}
           DASHBOARD_CHANNEL_IDS=${DASHBOARD_CHANNEL_IDS}
           DASHBOARD_INTERVAL_MS=${DASHBOARD_INTERVAL_MS}
+          NETBIRD_API_URL=${NETBIRD_API_URL}
+          NETBIRD_TOKEN=${NETBIRD_TOKEN}
+          NETBIRD_AUTO_GROUPS=${NETBIRD_AUTO_GROUPS}
+          NETBIRD_CONTAINER=${NETBIRD_CONTAINER:-netbird-server}
+          NETBIRD_CONFIG=${NETBIRD_CONFIG:-/etc/netbird/config.yaml}
+          DOCKER_GID=$(stat -c %g /var/run/docker.sock)
           ENVEOF
           for k in DISCORD_TOKEN API_KEY DAEMON_ID CLIENT_ID GUILD_IDS; do
             [ -n "${!k}" ] || { echo "::error::Missing $k"; exit 1; }

@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
 const { startDashboard, handleDashboardInteraction } = require('./utils/dashboard');
+const { handleNetbirdInteraction } = require('./utils/netbirdDashboard');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
@@ -35,8 +36,9 @@ client.on(Events.InteractionCreate, async interaction => {
         return;
     }
 
-    if (interaction.isButton() || interaction.isStringSelectMenu()) {
+    if (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()) {
         try {
+            if (await handleNetbirdInteraction(interaction)) return;
             await handleDashboardInteraction(interaction);
         } catch (err) {
             console.error(err);
