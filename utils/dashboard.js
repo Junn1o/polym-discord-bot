@@ -44,15 +44,26 @@ function getPort(inst) {
     return inst.config?.pingConfig?.port || null;
 }
 
+// NetBird IP of the host is static: fetch once, then reuse. Retries on later refreshes only if it failed.
+let peerIp = null;
+let peerIpWarned = false;
+
 async function fetchPeerIp() {
-    const peerName = process.env.NETBIRD_SERVER_PEER;
-    if (!peerName || !process.env.NETBIRD_API_URL || !process.env.NETBIRD_TOKEN) return null;
-    try {
-        return await getPeerIp(peerName);
-    } catch (err) {
-        console.error('Dashboard: fetch NetBird peer IP failed:', err.message);
+    if (peerIp) return peerIp;
+
+    const peerId = process.env.NETBIRD_SERVER_PEER;
+    if (!peerId || !process.env.NETBIRD_API_URL || !process.env.NETBIRD_TOKEN) {
+        if (!peerIpWarned) console.error('Dashboard: missing NETBIRD_SERVER_PEER, NETBIRD_API_URL or NETBIRD_TOKEN, hiding NetBird IP.');
+        peerIpWarned = true;
         return null;
     }
+    try {
+        peerIp = await getPeerIp(peerId);
+        console.log(`Dashboard: NetBird IP of peer ${peerId} is ${peerIp}`);
+    } catch (err) {
+        console.error('Dashboard: fetch NetBird peer IP failed:', err.message);
+    }
+    return peerIp;
 }
 
 async function buildEmbed() {

@@ -42,9 +42,10 @@ async function findUserByEmail(email) {
     return users.find(u => u.email?.toLowerCase() === email) ?? null;
 }
 
-async function getPeerIp(name) {
-    const peers = await netbirdRequest('GET', `/api/peers?${new URLSearchParams({ name })}`);
-    return peers[0]?.ip ?? null;
+async function getPeerIp(peerId) {
+    const peer = await netbirdRequest('GET', `/api/peers/${encodeURIComponent(peerId.trim())}`);
+    if (!peer?.ip) throw new Error(`peer ${peerId} has no IP`);
+    return peer.ip;
 }
 
 // Meets NetBird embedded IdP rules: >= 8 chars, uppercase, digit, special char.
