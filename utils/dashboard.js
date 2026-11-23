@@ -10,6 +10,7 @@ const {
 const { loadAliases } = require('./aliases');
 const { isAllowed } = require('./auth');
 const { buildNetbirdButtons } = require('./netbirdDashboard');
+const { getPeerIp } = require('./netbird');
 
 const PREFIX = 'dashboard';
 const ACTIONS = [
@@ -37,10 +38,28 @@ async function fetchInstance(uuid) {
     return (await res.json()).data;
 }
 
+function getPort(inst) {
+    const allocated = inst.info?.allocatedPorts?.find(p => p.protocol === 'tcp') ?? inst.info?.allocatedPorts?.[0];
+    if (allocated?.host) return allocated.host;
+    return inst.config?.pingConfig?.port || null;
+}
+
+async function fetchPeerIp() {
+    const peerName = process.env.NETBIRD_SERVER_PEER;
+    if (!peerName || !process.env.NETBIRD_API_URL || !process.env.NETBIRD_TOKEN) return null;
+    try {
+        return await getPeerIp(peerName);
+    } catch (err) {
+        console.error('Dashboard: fetch NetBird peer IP failed:', err.message);
+        return null;
+    }
+}
+
 async function buildEmbed() {
     const aliases = loadAliases();
     const embed = new EmbedBuilder().setTitle('Server Dashboard').setColor(0x2b8a3e).setTimestamp();
 
+    const peerIp = await fetchPeerIp();
     const entries = await Promise.all(
         Object.entries(aliases).map(async ([alias, uuid]) => {
             try {
@@ -48,7 +67,14 @@ async function buildEmbed() {
                 const status = STATUS_LABEL[inst.status] ?? `❔ ${inst.status}`;
                 const info = inst.info ?? {};
                 const players = info.currentPlayers >= 0 ? `${info.currentPlayers}/${info.maxPlayers}` : '-';
-                return { name: alias, value: `${status}\nPlayers: ${players}`, inline: true };
+                const version = info.version || '-';
+                const port = getPort(inst) ?? '-';
+                const address = peerIp ? `Address: \`${peerIp}:${port}\`` : `Port: ${port}`;
+                return {
+                    name: alias,
+                    value: `${status}\nVersion: ${version}\nPlayers: ${players}\n${address}`,
+                    inline: true,
+                };
             } catch {
                 return { name: alias, value: '⚠️ Không lấy được trạng thái', inline: true };
             }

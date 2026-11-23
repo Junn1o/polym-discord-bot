@@ -33,6 +33,7 @@ jobs:
           NETBIRD_API_URL: ${{ secrets.NETBIRD_API_URL || vars.NETBIRD_API_URL }}
           NETBIRD_TOKEN: ${{ secrets.NETBIRD_TOKEN }}
           NETBIRD_AUTO_GROUPS: ${{ secrets.NETBIRD_AUTO_GROUPS || vars.NETBIRD_AUTO_GROUPS }}
+          NETBIRD_SERVER_PEER: ${{ secrets.NETBIRD_SERVER_PEER || vars.NETBIRD_SERVER_PEER }}
           NETBIRD_CONTAINER: ${{ vars.NETBIRD_CONTAINER }}
           NETBIRD_CONFIG: ${{ vars.NETBIRD_CONFIG }}
         run: |
@@ -51,6 +52,7 @@ jobs:
           NETBIRD_API_URL=${NETBIRD_API_URL}
           NETBIRD_TOKEN=${NETBIRD_TOKEN}
           NETBIRD_AUTO_GROUPS=${NETBIRD_AUTO_GROUPS}
+          NETBIRD_SERVER_PEER=${NETBIRD_SERVER_PEER}
           NETBIRD_CONTAINER=${NETBIRD_CONTAINER:-netbird-server}
           NETBIRD_CONFIG=${NETBIRD_CONFIG:-/etc/netbird/config.yaml}
           DOCKER_GID=$(stat -c %g /var/run/docker.sock)
