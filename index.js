@@ -3,6 +3,7 @@ require('dotenv').config();
 const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
+const { startDashboard, handleDashboardInteraction } = require('./utils/dashboard');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
@@ -19,6 +20,7 @@ for (const file of commandFiles) {
 
 client.once(Events.ClientReady, c => {
     console.log(`Logged in as ${c.user.tag}`);
+    startDashboard(c).catch(err => console.error('Dashboard init failed:', err));
 });
 
 client.on(Events.InteractionCreate, async interaction => {
@@ -27,6 +29,15 @@ client.on(Events.InteractionCreate, async interaction => {
         if (!command?.autocomplete) return;
         try {
             await command.autocomplete(interaction);
+        } catch (err) {
+            console.error(err);
+        }
+        return;
+    }
+
+    if (interaction.isButton() || interaction.isStringSelectMenu()) {
+        try {
+            await handleDashboardInteraction(interaction);
         } catch (err) {
             console.error(err);
         }
