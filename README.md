@@ -31,3 +31,4 @@ Nút **NetBird Register** / **NetBird Reset password** nằm chung trong tin nh�
   `docker exec <NETBIRD_CONTAINER> netbird-server admin user change-password`. Bot cần chạy cùng host với NetBird
   và mount `/var/run/docker.sock` (đã cấu hình trong `docker-compose.yml`, `DOCKER_GID` = GID của docker.sock).
 - Người dùng chỉ reset được email do chính họ đăng ký qua bot; người trong `ALLOWED_USER_IDS`/`ALLOWED_ROLE_IDS` reset được mọi email.
+- Tài khoản NetBird role `admin`/`owner` không thể reset qua bot (kể cả admin Discord).

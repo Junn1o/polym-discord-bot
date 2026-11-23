@@ -12,6 +12,7 @@ const { isAllowed } = require('./auth');
 const netbird = require('./netbird');
 
 const PREFIX = 'netbird';
+const PROTECTED_ROLES = new Set(['admin', 'owner']);
 function isNetbirdEnabled() {
     return Boolean(process.env.NETBIRD_API_URL && process.env.NETBIRD_TOKEN);
 }
@@ -94,6 +95,18 @@ async function handleReset(interaction) {
 
     if (netbird.getOwner(email) !== interaction.user.id && !isAllowed(interaction)) {
         return interaction.editReply('Bạn chỉ có thể reset tài khoản do chính bạn đăng ký qua bot.');
+    }
+
+    let user;
+    try {
+        user = await netbird.findUserByEmail(email);
+    } catch (err) {
+        console.error('NetBird lookup failed:', err);
+        return interaction.editReply('Không kiểm tra được tài khoản, thử lại sau.');
+    }
+    if (!user) return interaction.editReply('Không tìm thấy tài khoản với email này.');
+    if (PROTECTED_ROLES.has(user.role)) {
+        return interaction.editReply('Không thể reset mật khẩu tài khoản admin/owner qua bot.');
     }
 
     const password = netbird.generatePassword();

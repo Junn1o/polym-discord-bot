@@ -37,6 +37,11 @@ async function createUser(email, name) {
     });
 }
 
+async function findUserByEmail(email) {
+    const users = await netbirdRequest('GET', '/api/users?service_user=false');
+    return users.find(u => u.email?.toLowerCase() === email) ?? null;
+}
+
 // Meets NetBird embedded IdP rules: >= 8 chars, uppercase, digit, special char.
 function generatePassword(length = 16) {
     const sets = ['ABCDEFGHJKLMNPQRSTUVWXYZ', 'abcdefghijkmnopqrstuvwxyz', '23456789', '!@#$%^&*-_=+?'];
@@ -87,4 +92,4 @@ function getOwner(email) {
     return loadOwners()[email];
 }
 
-module.exports = { isValidEmail, createUser, generatePassword, resetPassword, setOwner, getOwner };
+module.exports = { isValidEmail, createUser, findUserByEmail, generatePassword, resetPassword, setOwner, getOwner };
