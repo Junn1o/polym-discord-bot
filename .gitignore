@@ -38,6 +38,6 @@ aliases.json
 #claude and skills
 .claude/*
 #outside docs
-mcsmanager-api-docs/*
-discord-api-docs/*
-netbird-docs/*
+mcsmanager-api-docs/
+discord-api-docs/
+netbird-docs/
