@@ -2,15 +2,95 @@ name: Deploy
 
 on:
   push:
-    branches: [master]
+    paths-ignore: ['docs/**', '**.md']
+  pull_request:
+    paths-ignore: ['docs/**', '**.md']
   workflow_dispatch:
 
 concurrency:
-  group: deploy
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # never cancel a deploy halfway through
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
+  pick-runner:
+    # pull requests from this repo are already covered by the push run of the same commit
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-24.04
+    outputs:
+      runner: ${{ steps.pick.outputs.runner }}
+    steps:
+      - name: pick runner
+        id: pick
+        env:
+          TOKEN: ${{ secrets.RUNNER_STATUS_TOKEN }}
+          TRUSTED: ${{ github.event_name != 'pull_request' && github.actor == github.repository_owner }}
+          SELF_HOSTED_RUNNER: ${{ vars.SELF_HOSTED_RUNNER }}
+        run: |
+          runner='"ubuntu-24.04"'
+          echo "event=${{ github.event_name }} actor=${{ github.actor }} owner=${{ github.repository_owner }} trusted=$TRUSTED"
+          if [ "$TRUSTED" != "true" ]; then
+            echo "Not a push by the owner, using GitHub runner"
+          elif [ -z "$TOKEN" ]; then
+            echo "RUNNER_STATUS_TOKEN is empty (must be a repository secret), using GitHub runner"
+          elif [ -z "$SELF_HOSTED_RUNNER" ]; then
+            echo "Repository variable SELF_HOSTED_RUNNER is not set, using GitHub runner"
+          else
+            status=$(curl -sS -o runners.json -w '%{http_code}' \
+              -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runners")
+            echo "runners API HTTP $status"
+            if [ "$status" = "200" ]; then
+              echo "Runners registered on this repo:"
+              jq -r '.runners[] | "  \(.name) status=\(.status) busy=\(.busy) labels=\([.labels[].name] | join(","))"' runners.json
+              online=$(jq --arg name "$SELF_HOSTED_RUNNER" '[.runners[] | select(.name == $name and .status == "online")] | length' runners.json)
+              if [ "$online" -gt 0 ]; then
+                runner='["self-hosted","Linux"]'
+              else
+                echo "$SELF_HOSTED_RUNNER is not registered on this repo or is offline"
+              fi
+            else
+              jq -r '.message // empty' runners.json
+            fi
+          fi
+          echo "Using runner: $runner"
+          echo "runner=$runner" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: pick-runner
+    runs-on: ${{ fromJSON(needs.pick-runner.outputs.runner) }}
+    container:
+      image: oven/bun:1
+      volumes:
+        - bun-cache:/bun-cache
+    env:
+      # HOME is /github/home inside container jobs, so pin the cache dir explicitly
+      BUN_INSTALL_CACHE_DIR: /bun-cache
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache bun packages
+        if: runner.environment != 'self-hosted'
+        uses: actions/cache@v4
+        with:
+          path: /bun-cache
+          key: bun-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Check bundle
+        run: bun build ./index.js ./deploy-commands.js ./commands/*.js --target=bun --outdir="$RUNNER_TEMP/bundle"
+
+      # container runs as root; hand files back so the next self-hosted checkout can clean them
+      - name: Fix workspace ownership
+        if: always()
+        run: chown -R "$(stat -c '%u:%g' "$GITHUB_WORKSPACE/..")" "$GITHUB_WORKSPACE"
+
   deploy:
+    needs: build
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
     runs-on: self-hosted
     environment: for-polym-utility
     env:
