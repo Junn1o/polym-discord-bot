@@ -143,4 +143,4 @@ async function handleNetbirdInteraction(interaction) {
     return false;
 }
 
-module.exports = { buildNetbirdButtons, handleNetbirdInteraction };
+module.exports = { isNetbirdEnabled, buildNetbirdButtons, handleNetbirdInteraction };

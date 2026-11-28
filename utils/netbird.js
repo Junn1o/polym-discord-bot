@@ -2,7 +2,7 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
-const { spawn } = require('node:child_process');
+const { spawn, execFile } = require('node:child_process');
 
 const OWNERS_PATH = path.join(__dirname, '..', 'data', 'netbird-owners.json');
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -82,6 +82,18 @@ function resetPassword(email, password) {
     });
 }
 
+function getContainerStatus() {
+    const container = process.env.NETBIRD_CONTAINER || 'netbird-server';
+    const format = '{{.State.Status}}|{{if .State.Health}}{{.State.Health.Status}}{{end}}';
+    return new Promise((resolve, reject) => {
+        execFile('docker', ['inspect', '--format', format, container], { timeout: 10_000 }, (err, stdout, stderr) => {
+            if (err) return reject(new Error(stderr.trim() || err.message));
+            const [status, health] = stdout.trim().split('|');
+            resolve({ status, health: health || null });
+        });
+    });
+}
+
 function loadOwners() {
     if (!fs.existsSync(OWNERS_PATH)) return {};
     return JSON.parse(fs.readFileSync(OWNERS_PATH, 'utf8'));
@@ -98,4 +110,4 @@ function getOwner(email) {
     return loadOwners()[email];
 }
 
-module.exports = { isValidEmail, createUser, findUserByEmail, getPeerIp, generatePassword, resetPassword, setOwner, getOwner };
+module.exports = { isValidEmail, createUser, findUserByEmail, getPeerIp, generatePassword, resetPassword, getContainerStatus, setOwner, getOwner };

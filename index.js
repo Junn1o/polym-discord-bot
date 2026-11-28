@@ -3,7 +3,7 @@ require('dotenv').config();
 const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
-const { startDashboard, handleDashboardInteraction } = require('./utils/dashboard');
+const { startDashboard, handleDashboardInteraction, markDashboardOffline } = require('./utils/dashboard');
 const { handleNetbirdInteraction } = require('./utils/netbirdDashboard');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
@@ -62,5 +62,20 @@ client.on(Events.InteractionCreate, async interaction => {
         }
     }
 });
+
+let stopping = false;
+
+async function shutdown(signal) {
+    if (stopping) return;
+    stopping = true;
+    console.log(`Received ${signal}, marking dashboard offline.`);
+    // Docker kills the container 10s after SIGTERM, so give up well before that.
+    await Promise.race([markDashboardOffline(), new Promise(resolve => setTimeout(resolve, 8_000))]);
+    await client.destroy();
+    process.exit(0);
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 client.login(process.env.DISCORD_TOKEN);

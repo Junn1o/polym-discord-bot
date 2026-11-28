@@ -9,8 +9,8 @@ const {
 } = require('discord.js');
 const { loadAliases } = require('./aliases');
 const { isAllowed } = require('./auth');
-const { buildNetbirdButtons } = require('./netbirdDashboard');
-const { getPeerIp } = require('./netbird');
+const { buildNetbirdButtons, isNetbirdEnabled } = require('./netbirdDashboard');
+const { getPeerIp, getContainerStatus } = require('./netbird');
 
 const PREFIX = 'dashboard';
 const ACTIONS = [
@@ -21,6 +21,9 @@ const ACTIONS = [
 ];
 
 let refreshDashboard = null;
+let dashboardTargets = [];
+let dashboardTimer = null;
+let shuttingDown = false;
 
 const STATUS_LABEL = {
     '-1': '🟡 Busy',
@@ -66,11 +69,32 @@ async function fetchPeerIp() {
     return peerIp;
 }
 
+const VPN_STATUS_LABEL = {
+    running: '🟢 Running',
+    restarting: '🟡 Restarting',
+    paused: '🟠 Paused',
+    created: '🔴 Stopped',
+    exited: '🔴 Stopped',
+    dead: '🔴 Dead',
+};
+
+async function fetchVpnStatus() {
+    try {
+        const { status, health } = await getContainerStatus();
+        if (status === 'running' && health === 'unhealthy') return '🟠 Unhealthy';
+        if (status === 'running' && health === 'starting') return '🟡 Starting';
+        return VPN_STATUS_LABEL[status] ?? `❔ ${status}`;
+    } catch (err) {
+        console.error('Dashboard: inspect NetBird container failed:', err.message);
+        return '⚠️ Không lấy được trạng thái';
+    }
+}
+
 async function buildEmbed() {
     const aliases = loadAliases();
     const embed = new EmbedBuilder().setTitle('Server Dashboard').setColor(0x2b8a3e).setTimestamp();
 
-    const peerIp = await fetchPeerIp();
+    const [peerIp, vpnStatus] = await Promise.all([fetchPeerIp(), isNetbirdEnabled() ? fetchVpnStatus() : null]);
     const entries = await Promise.all(
         Object.entries(aliases).map(async ([alias, uuid]) => {
             try {
@@ -92,8 +116,11 @@ async function buildEmbed() {
         })
     );
 
-    if (entries.length === 0) embed.setDescription('Chưa có server trong aliases.json.');
-    else embed.addFields(entries.slice(0, 25));
+    const description = [];
+    if (vpnStatus) description.push(`**VPN Status:** ${vpnStatus}`);
+    if (entries.length === 0) description.push('Chưa có server trong aliases.json.');
+    if (description.length > 0) embed.setDescription(description.join('\n'));
+    if (entries.length > 0) embed.addFields(entries.slice(0, 25));
     return embed;
 }
 
@@ -224,6 +251,7 @@ async function startDashboard(client) {
     const interval = Number(process.env.DASHBOARD_INTERVAL_MS) || 60_000;
 
     const update = async () => {
+        if (shuttingDown) return;
         let payload;
         try {
             payload = { embeds: [await buildEmbed()], components: buildComponents() };
@@ -231,6 +259,7 @@ async function startDashboard(client) {
             console.error('Dashboard build failed:', err);
             return;
         }
+        if (shuttingDown) return;
 
         await Promise.all(
             targets.map(async target => {
@@ -247,9 +276,32 @@ async function startDashboard(client) {
         );
     };
 
+    dashboardTargets = targets;
     refreshDashboard = update;
     await update();
-    setInterval(update, interval);
+    dashboardTimer = setInterval(update, interval);
 }
 
-module.exports = { startDashboard, handleDashboardInteraction };
+async function markDashboardOffline() {
+    shuttingDown = true;
+    clearInterval(dashboardTimer);
+
+    // Keep the title so findExistingMessage reuses this message on next start.
+    const embed = new EmbedBuilder()
+        .setTitle('Server Dashboard')
+        .setColor(0x868e96)
+        .setDescription('🔴 **PC đang tắt**\nTất cả server và VPN đều offline.')
+        .setTimestamp();
+
+    await Promise.all(
+        dashboardTargets
+            .filter(target => target.message)
+            .map(target =>
+                target.message.edit({ embeds: [embed], components: [] }).catch(err => {
+                    console.error(`Dashboard offline update failed in channel ${target.channel.id}:`, err);
+                })
+            )
+    );
+}
+
+module.exports = { startDashboard, handleDashboardInteraction, markDashboardOffline };
