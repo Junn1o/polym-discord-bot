@@ -11,6 +11,8 @@ const { loadAliases } = require('./aliases');
 const { isAllowed } = require('./auth');
 const { buildNetbirdButtons, isNetbirdEnabled } = require('./netbirdDashboard');
 const { getPeerIp, getContainerStatus } = require('./netbird');
+const { scheduleReplyDelete } = require('./autoDelete');
+const { recordCommand, getHistory } = require('./history');
 
 const PREFIX = 'dashboard';
 const ACTIONS = [
@@ -142,10 +144,25 @@ function buildComponents() {
     rows.push(
         new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId(`${PREFIX}:refresh`).setLabel('Refresh').setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder().setCustomId(`${PREFIX}:history`).setLabel('History').setStyle(ButtonStyle.Secondary),
             ...buildNetbirdButtons()
         )
     );
     return rows;
+}
+
+function buildHistoryEmbed() {
+    const history = getHistory();
+    const embed = new EmbedBuilder().setTitle('Lịch sử dùng lệnh').setColor(0x1971c2);
+    if (history.length === 0) return embed.setDescription('Chưa có lệnh nào từ lúc bot khởi động.');
+
+    const lines = history.map(h => {
+        const time = `<t:${Math.floor(h.at / 1000)}:f>`;
+        const target = h.alias ? ` \`${h.alias}\`` : '';
+        const via = h.source === 'dashboard' ? ' (dashboard)' : '';
+        return `${time} <@${h.userId}> **/${h.command}**${target}${via}`;
+    });
+    return embed.setDescription(lines.join('\n')).setFooter({ text: `${history.length} lệnh gần nhất` });
 }
 
 function buildActionRow(alias) {
@@ -161,6 +178,7 @@ async function handleDashboardInteraction(interaction) {
 
     if (!isAllowed(interaction)) {
         await interaction.reply({ content: 'Bạn không có quyền dùng lệnh này.', flags: MessageFlags.Ephemeral });
+        scheduleReplyDelete(interaction);
         return true;
     }
 
@@ -173,6 +191,16 @@ async function handleDashboardInteraction(interaction) {
         return true;
     }
 
+    if (action === 'history') {
+        await interaction.reply({
+            embeds: [buildHistoryEmbed()],
+            flags: MessageFlags.Ephemeral,
+            allowedMentions: { parse: [] },
+        });
+        scheduleReplyDelete(interaction);
+        return true;
+    }
+
     if (action === 'select' && interaction.isStringSelectMenu()) {
         const selected = interaction.values[0];
         await interaction.reply({
@@ -180,6 +208,7 @@ async function handleDashboardInteraction(interaction) {
             components: [buildActionRow(selected)],
             flags: MessageFlags.Ephemeral,
         });
+        scheduleReplyDelete(interaction);
         return true;
     }
 
@@ -191,6 +220,7 @@ async function handleDashboardInteraction(interaction) {
         options: { value: { getString: () => alias } },
     });
 
+    recordCommand(interaction, action, alias, 'dashboard');
     try {
         await command.execute(proxy);
     } catch (err) {
@@ -198,6 +228,7 @@ async function handleDashboardInteraction(interaction) {
         const reply = proxy.deferred || proxy.replied ? proxy.editReply.bind(proxy) : proxy.reply.bind(proxy);
         await reply({ content: 'Command failed.', flags: MessageFlags.Ephemeral }).catch(() => {});
     }
+    scheduleReplyDelete(proxy);
     await refreshDashboard?.();
     return true;
 }

@@ -5,6 +5,9 @@ const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
 const { startDashboard, handleDashboardInteraction, markDashboardOffline } = require('./utils/dashboard');
 const { handleNetbirdInteraction } = require('./utils/netbirdDashboard');
+const { scheduleReplyDelete } = require('./utils/autoDelete');
+const { recordCommand } = require('./utils/history');
+const { isAllowed } = require('./utils/auth');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
@@ -51,6 +54,9 @@ client.on(Events.InteractionCreate, async interaction => {
     const command = interaction.client.commands.get(interaction.commandName);
     if (!command) return;
 
+    if (isAllowed(interaction)) {
+        recordCommand(interaction, interaction.commandName, interaction.options.getString('name'), 'slash');
+    }
     try {
         await command.execute(interaction);
     } catch (err) {
@@ -61,6 +67,7 @@ client.on(Events.InteractionCreate, async interaction => {
             await interaction.reply({ content: 'Command failed.', ephemeral: true });
         }
     }
+    scheduleReplyDelete(interaction);
 });
 
 let stopping = false;
